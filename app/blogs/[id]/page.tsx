@@ -1,12 +1,16 @@
+import Link from 'next/link'
+import { eq } from 'drizzle-orm'
 import { notFound } from 'next/navigation'
-import { getBlog } from '@/lib/blogs'
+import { db } from '@/db'
+import { blogs } from '@/db/schema'
 import { like } from '@/app/actions'
 
 export const dynamic = 'force-dynamic'
 
 export default async function BlogPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const blog = getBlog(id)
+  const id = Number((await params).id)
+  if (!Number.isSafeInteger(id) || id < 1) notFound()
+  const blog = await db.query.blogs.findFirst({ where: eq(blogs.id, id), with: { user: true } })
   if (!blog) notFound()
   return (
     <div>
@@ -18,6 +22,7 @@ export default async function BlogPage({ params }: { params: Promise<{ id: strin
         <span data-testid="like-count">{blog.likes} likes</span>
         <button type="submit">like</button>
       </form>
+      {blog.user && <p>added by <Link href={`/users/${blog.user.username}`}>{blog.user.name}</Link></p>}
     </div>
   )
 }
